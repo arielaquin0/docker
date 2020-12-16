@@ -35,8 +35,8 @@ services:
     environment:
       MYSQL_DATABASE: visa_db
       MYSQL_USER: root
-      MYSQL_PASSWORD: 1nc0rr3cT^
-      MYSQL_ROOT_PASSWORD: 1nc0rr3cT^
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     command:

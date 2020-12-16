@@ -1,0 +1,140 @@
+version: '3'
+
+networks:
+  laravel:
+    ipam:
+      config:
+        - subnet: 172.16.0.0/23
+
+services:
+  site:
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+    container_name: nginx
+    ports:
+      - "8088:80"
+    volumes:
+      - ../visa_api:/var/www/html:delegated
+    depends_on:
+      - php
+      - mysql
+    networks:
+      laravel:
+        ipv4_address: 172.16.1.1
+
+  mysql:
+    image: mysql:5.7.29
+    container_name: mysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "4306:3306"
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: visa_db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 1nc0rr3cT^
+      MYSQL_ROOT_PASSWORD: 1nc0rr3cT^
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    command:
+      - mysqld
+      - "--character-set-server=utf8mb4"
+      - "--skip-character-set-client-handshake"
+      - "--collation-server=utf8mb4_general_ci"
+      - "--default-time-zone=Asia/Manila"
+    networks:
+      laravel:
+        ipv4_address: 172.16.1.3
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    links:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    restart: always
+    ports:
+      - "8183:80"
+    networks:
+      laravel:
+        ipv4_address: 172.16.1.2
+
+  php:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    container_name: php
+    volumes:
+      - ../visa_api:/var/www/html:delegated
+    ports:
+      - "9000:9000"
+    networks:
+      laravel:
+        ipv4_address: 172.16.1.4
+
+  composer:
+    build:
+      context: .
+      dockerfile: composer.dockerfile
+    container_name: composer
+    volumes:
+      - ../visa_api:/var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - php
+    user: laravel
+    networks:
+      laravel:
+        ipv4_address: 172.16.1.5
+    entrypoint: ['composer', '--ignore-platform-reqs']
+
+  npm:
+    image: node:13.7
+    container_name: npm
+    volumes:
+      - ../visa_api:/var/www/html
+    working_dir: /var/www/html
+    entrypoint: ['npm']
+
+  artisan:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    container_name: artisan
+    volumes:
+      - ../visa_api:/var/www/html:delegated
+    depends_on:
+      - mysql
+    working_dir: /var/www/html
+    user: laravel
+    entrypoint: ['php', '/var/www/html/artisan']
+    networks:
+      laravel:
+        ipv4_address: 172.16.1.6
+
+  cpanel:
+    build:
+      context: .
+      dockerfile: vue.dockerfile
+    container_name: visa_vue
+    stdin_open: true
+    tty: true
+    ports:
+      - "8082:8080"
+    volumes:
+      - /var/www/visa_vue/node_modules
+      - ../visa_vue:/var/www/visa_vue
+
+  cpanel_npm:
+    image: node:13.7
+    container_name: vue_npm
+    volumes:
+      - ../visa_vue:/var/www/visa_vue
+    working_dir: /var/www/visa_vue
+    entrypoint: ['npm']
